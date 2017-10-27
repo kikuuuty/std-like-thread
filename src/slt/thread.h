@@ -23,33 +23,33 @@ namespace slt {
     class thread final
     {
     public:
-		struct priority
-		{
-			enum type
-			{
-				highest = 255,
-				above   = 191,
-				normal  = 127,
-				below   = 64,
-				lowest  = 0,
-			};
-		};
+        struct priority
+        {
+            enum type
+            {
+                highest = 255,
+                above   = 191,
+                normal  = 127,
+                below   = 64,
+                lowest  = 0,
+            };
+        };
 
-		struct affinity
-		{
-			enum type
-			{
-				user0 = 0x01,
-				user1 = 0x02,
-				user2 = 0x04,
-				user3 = 0x08,
-				user4 = 0x10,
-				user5 = 0x20,
-				user6 = 0x40,
-				user7 = 0x80,
-				all   = 0xFF,
-			};
-		};
+        struct affinity
+        {
+            enum type
+            {
+                user0 = 0x01,
+                user1 = 0x02,
+                user2 = 0x04,
+                user3 = 0x08,
+                user4 = 0x10,
+                user5 = 0x20,
+                user6 = 0x40,
+                user7 = 0x80,
+                all   = 0xFF,
+            };
+        };
 
         class id;
 
@@ -57,7 +57,7 @@ namespace slt {
 
         using native_handle_type = void*;
 
-	public:
+    public:
         thread() noexcept
         {
             detail::thread_set_null(mThr);
@@ -135,7 +135,7 @@ namespace slt {
             {
                 auto b = std::make_unique<std::tuple<std::decay_t<F>, std::decay_t<Args>...> >(std::forward<F>(f), std::forward<Args>(args)...);
                 detail::holder<decltype(b)> holder(std::move(b));
-				attributes attrs = std::forward<A>(a);
+                attributes attrs = std::forward<A>(a);
                 return detail::create(&holder, attrs.stackSize, attrs.priority, attrs.affinity, attrs.name);
             }
         };
