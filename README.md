@@ -1,4 +1,4 @@
-# std-like-thread
+# std-like thread
 スレッド属性を指定可能なstd風のthreadクラス。<br>
 標準のstd::threadは便利だけど、スタックサイズやアフィニティマスクを指定したい、そんな人向けです。(要c++14)
 
