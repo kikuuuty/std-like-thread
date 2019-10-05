@@ -11,29 +11,28 @@
 namespace slt {
 namespace detail {
 
-    class placeholder;
+class placeholder;
 
-    struct thread_t
-    {
-        unsigned id;
-        HANDLE handle;
-    };
+struct thread_t {
+    unsigned id;
+    HANDLE handle;
+};
 
-    inline uintptr_t thread_id(const thread_t& thr) noexcept { return static_cast<uintptr_t>(thr.id); }
+inline uintptr_t thread_id(const thread_t& thr) noexcept { return static_cast<uintptr_t>(thr.id); }
 
-    inline uintptr_t thread_handle(const thread_t& thr) noexcept { return reinterpret_cast<uintptr_t>(thr.handle); }
+inline uintptr_t thread_handle(const thread_t& thr) noexcept { return reinterpret_cast<uintptr_t>(thr.handle); }
 
-    inline bool thread_is_null(const thread_t& thr) noexcept { return thr.id == 0; }
+inline bool thread_is_null(const thread_t& thr) noexcept { return thr.id == 0; }
 
-    inline void thread_set_null(thread_t& thr) noexcept { thr.id = 0; }
+inline void thread_set_null(thread_t& thr) noexcept { thr.id = 0; }
 
-    thread_t create(placeholder* holder, size_t stackSize, int priority, int affinity, const std::string& name);
+thread_t create(placeholder* holder, size_t stackSize, int32_t priority, uint64_t affinity, const std::string& name);
 
-    bool join(thread_t& thr);
+bool join(thread_t& thr);
 
-    void detach(thread_t& thr);
+void detach(thread_t& thr);
 
-    unsigned hardware_concurrency();
+unsigned hardware_concurrency();
 
 }
 }
