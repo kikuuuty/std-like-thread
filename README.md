@@ -10,6 +10,7 @@ std::thread には、スレッドのプライオリティ変更などを行う�
 ```cpp
 // 通常の属性でスレッドを実行
 auto thr = th::thread([] (const char* str) { std::printf(str); }, "hello, world");
+thr.join();
 
 // 属性を指定してスレッドを実行
 th::thread::attributes attrs;
