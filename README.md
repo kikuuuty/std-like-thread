@@ -5,12 +5,18 @@ std::thread には、スレッドのプライオリティ変更などを行う�
 
 1. ハンドル型に対する操作は環境依存のプログラミングが必要になる。
 1. スレッドが起動してから設定するので、指定できない属性がある。
+
+そのため、スレッドを起動する前に必要な属性を指定できる必要があります。
 ```cpp
+// 通常の属性でスレッドを実行
+auto thr = th::thread([] (const char* str) { std::printf(str); }, "hello, world");
+
+// 属性を指定してスレッドを実行
 th::thread::attributes attrs;
 attrs.stackSize = 512 * 1024;
 attrs.priority = thread::PRIORITY_NORMAL;
 attrs.affinity = 0x03;
 attrs.name = "thread name for debugging";
-auto thr = th::thread(attrs, [] (const char* str) { std::printf(str); }, "hello, world");
+thr = th::thread(attrs, [] (const char* str) { std::printf(str); }, "hello, world");
 thr.join();
 ```
