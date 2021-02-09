@@ -14,7 +14,7 @@ auto thr = th::thread([] (const char* str) { std::printf(str); }, "hello, world"
 // 属性を指定してスレッドを実行
 th::thread::attributes attrs;
 attrs.stackSize = 512 * 1024;
-attrs.priority = thread::PRIORITY_NORMAL;
+attrs.priority = th::thread::PRIORITY_NORMAL;
 attrs.affinity = 0x03;
 attrs.name = "thread name for debugging";
 thr = th::thread(attrs, [] (const char* str) { std::printf(str); }, "hello, world");
