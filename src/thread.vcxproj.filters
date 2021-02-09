@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="..\th\src\thread_win32.cpp">
+      <Filter>th\src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="th">
+      <UniqueIdentifier>{5029757e-36a0-48df-9370-b31425a7daca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="th\include">
+      <UniqueIdentifier>{b678cfdb-8e0b-4bad-9c09-0bccb50dece5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="th\src">
+      <UniqueIdentifier>{502cca09-250c-40d5-9741-0236725f8d5f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\th\include\th\thread_win32.h">
+      <Filter>th\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\th\include\th\thread.h">
+      <Filter>th\include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\th\include\th\thread.inl">
+      <Filter>th\include</Filter>
+    </None>
+  </ItemGroup>
+</Project>

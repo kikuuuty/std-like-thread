@@ -1,32 +1,29 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "slt/thread.h"
+#include <th/thread.h>
 
 class Foo {
 public:
     Foo() = default;
-    ~Foo() = default;
 
     void doSomething(int32_t n) {
-        slt::this_thread::sleep_for(std::chrono::seconds(n));
+        th::this_thread::sleep_for(std::chrono::seconds(n));
     }
 };
 
-int main(int32_t, char**) {
-    using namespace slt;
-
-    auto thr = thread([] (const char* str) { std::printf(str); }, "hello, world");
+int main(int, char**) {
+    auto thr = th::thread([] (const char* str) { std::printf(str); }, "hello, world\n");
 
     thr.join();
 
-    thread::attributes attrs;
+    th::thread::attributes attrs;
     attrs.stackSize = 512 * 1024;
-    attrs.priority = thread::kPriorityNormal;
+    attrs.priority = th::thread::PRIORITY_NORMAL;
     attrs.affinity = 0x03;
     attrs.name = "thread name for debugging";
     Foo foo;
-    thr = thread(attrs, &Foo::doSomething, foo, 3);
+    thr = th::thread(attrs, &Foo::doSomething, foo, 3);
 
     thr.join();
 

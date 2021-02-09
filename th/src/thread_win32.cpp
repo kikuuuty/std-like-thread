@@ -1,14 +1,18 @@
-﻿#include "thread_win32.h"
-
-#include <cassert>
+﻿#include <cassert>
 #include <cmath>
 #include <process.h>
+#include <algorithm>
 
-#include "thread.h"
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
 
-#define Thr_min(a,b)            ((a) < (b)) ? (a) : (b)
-#define Thr_max(a,b)            ((a) > (b)) ? (a) : (b)
-#define Thr_clamp(n,min,max)    Thr_min(Thr_max((n), (min)), (max))
+#include <th/thread.h>
+#include <th/thread_win32.h>
 
 namespace {
 
@@ -35,25 +39,103 @@ void setThreadName(DWORD threadId, const char* name) {
 
 }
 
-namespace slt {
+namespace th {
 
-thread::attributes::attributes() noexcept
-    : stackSize(64 * 1024)
-    , priority(thread::kPriorityNormal)
-    , affinity(thread::kAffinityMaskAll)
-    , name("slt::thread") { }
+const size_t thread::DEFAULT_STACKSIZE = 64 * 1024;
 
-thread::id this_thread::get_id() noexcept {
-    detail::thread_t thr;
-    thr.id = GetCurrentThreadId();
-    thr.handle = GetCurrentThread();
+namespace detail {
+
+thread_t createThread(placeholder* holder, size_t stackSize, int32_t priority, uint64_t affinity, const char* name) {
+    thread_t thr;
+    thr.id = 0;
+
+    struct thread_args_t {
+        placeholder* holder;
+        const char* name;
+    };
+
+    thread_args_t args = {holder, name};
+
+    unsigned threadId;
+    HANDLE handle = reinterpret_cast<HANDLE>(_beginthreadex(
+        NULL,
+        static_cast<uint32_t>(stackSize),
+        [] (void* ud) -> unsigned {
+            auto& args = *static_cast<thread_args_t*>(ud);
+#if defined(_DEBUG) || defined(DEBUG)
+            setThreadName(GetCurrentThreadId(), args.name);
+#endif
+            args.holder->go();
+            return 0;
+        },
+        reinterpret_cast<void*>(&args),
+        CREATE_SUSPENDED,
+        &threadId));
+
+    if (handle <= 0) {
+        assert(0 && "_beginthreadex failed.");
+        return thr;
+    }
+
+    DWORD ret = S_OK;
+    constexpr int32_t range = THREAD_PRIORITY_HIGHEST - THREAD_PRIORITY_LOWEST;
+	int32_t npriority = std::min(std::max(priority, thread::PRIORITY_LOWEST), thread::PRIORITY_HIGHEST);
+    npriority = THREAD_PRIORITY_LOWEST + static_cast<int32_t>(std::round(range * static_cast<float>(npriority) * (1.0f / 255)));
+    ret = SetThreadPriority(handle, npriority);
+    if (ret == FALSE) {
+        assert(0 && "SetThreadPriority failed.");
+        return thr;
+    }
+    DWORD_PTR previousMask = SetThreadAffinityMask(handle, static_cast<DWORD_PTR>(affinity));
+    if (previousMask == NULL) {
+        assert(0 && "SetThreadAffinityMask failed.");
+        return thr;
+    }
+    ret = SetThreadIdealProcessor(handle, MAXIMUM_PROCESSORS);
+    if (0xFFFFFFFF == ret) {
+        assert(0 && "SetThreadIdealProcessor failed.");
+        return thr;
+    }
+    ret = ResumeThread(handle);
+    if (0xFFFFFFFF == ret) {
+        assert(0 && "ResumeThread failed.");
+        return thr;
+    }
+
+    thr.id = threadId;
+    thr.handle = handle;
+    holder->waitForRunning();
     return thr;
 }
 
+bool joinThread(thread_t& thr) {
+    if (WAIT_OBJECT_0 == WaitForSingleObject(thr.handle, INFINITE)) {
+        CloseHandle(thr.handle);
+        return true;
+    }
+    return false;
 }
 
-namespace slt {
+void detachThread(thread_t& thr) {
+    CloseHandle(thr.handle);
+}
+
+unsigned hardware_concurrency() {
+    SYSTEM_INFO info;
+    GetSystemInfo(&info);
+    return info.dwNumberOfProcessors;
+}
+
+} // namespace detail
+
 namespace this_thread {
+
+thread::id get_id() noexcept {
+    th::detail::thread_t thr;
+    thr.handle = ::GetCurrentThread();
+    thr.id = ::GetCurrentThreadId();
+    return thr;
+}
 
 void yield() noexcept {
     // https://msdn.microsoft.com/ja-jp/library/cc429474.aspx
@@ -76,92 +158,6 @@ void sleep_for(const std::chrono::nanoseconds& ns) noexcept {
     }
 }
 
-}
-}
+} // namespace this_thread
 
-namespace slt {
-namespace detail {
-
-thread_t create(placeholder* holder, size_t stackSize, int32_t priority, uint64_t affinity, const std::string& name) {
-    thread_t thr;
-    thr.id = 0;
-
-    struct thread_args_t {
-        placeholder* holder;
-        std::string name;
-    };
-
-    thread_args_t args = {holder, name};
-
-    unsigned threadId;
-    HANDLE handle = reinterpret_cast<HANDLE>(::_beginthreadex(
-        NULL,
-        static_cast<uint32_t>(stackSize),
-        [] (void* ud) -> unsigned {
-            auto& args = *static_cast<thread_args_t*>(ud);
-#if defined(_DEBUG) || defined(DEBUG)
-            setThreadName(GetCurrentThreadId(), args.name.c_str());
-#endif
-            args.holder->go();
-            return 0;
-        },
-        reinterpret_cast<void*>(&args),
-        CREATE_SUSPENDED,
-        &threadId));
-
-    if (handle <= 0) {
-        assert(0 && "_beginthreadex failed.");
-        return thr;
-    }
-
-    DWORD ret = S_OK;
-    constexpr int32_t kRange = THREAD_PRIORITY_HIGHEST - THREAD_PRIORITY_LOWEST;
-	int32_t npriority = Thr_clamp(priority, thread::kPriorityLowest, thread::kPriorityHighest);
-    npriority = THREAD_PRIORITY_LOWEST + static_cast<int32_t>(std::round(kRange * static_cast<float>(npriority) * (1.0f / 255)));
-    ret = SetThreadPriority(handle, npriority);
-    if (0 == ret) {
-        assert(0 && "SetThreadPriority failed.");
-        return thr;
-    }
-    DWORD_PTR previousMask = SetThreadAffinityMask(handle, static_cast<DWORD_PTR>(affinity));
-    if (0 == previousMask) {
-        assert(0 && "SetThreadAffinityMask failed.");
-        return thr;
-    }
-    ret = SetThreadIdealProcessor(handle, MAXIMUM_PROCESSORS);
-    if (0xFFFFFFFF == ret) {
-        assert(0 && "SetThreadIdealProcessor failed.");
-        return thr;
-    }
-    ret = ResumeThread(handle);
-    if (0xFFFFFFFF == ret) {
-        assert(0 && "ResumeThread failed.");
-        return thr;
-    }
-
-    thr.id = threadId;
-    thr.handle = handle;
-    holder->waitForRunning();
-    return thr;
-}
-
-bool join(thread_t& thr) {
-    if (WAIT_OBJECT_0 == WaitForSingleObject(thr.handle, INFINITE)) {
-        CloseHandle(thr.handle);
-        return true;
-    }
-    return false;
-}
-
-void detach(thread_t& thr) {
-    CloseHandle(thr.handle);
-}
-
-unsigned hardware_concurrency() {
-    SYSTEM_INFO info;
-    GetSystemInfo(&info);
-    return info.dwNumberOfProcessors;
-}
-
-}
 }
